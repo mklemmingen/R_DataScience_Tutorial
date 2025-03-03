@@ -1,0 +1,1136 @@
+---
+theme: simplex
+title: |
+  Interaktives R Tutorial
+  DataScience Methoden mit Umfragedaten 📊
+author: Marty Lauterbach
+output: 
+  html_document:
+    theme: simplex
+    highlight: textmate
+    number_sections: TRUE
+    toc: true
+    toc_depth: 5
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    smart: true
+runtime: shiny_prerendered
+description: >
+  data science tutorial with collected data about non-key personal information to showcase distribution topics
+date: "`r format(Sys.time(), '%d. %B of %Y')`"
+---
+
+```{css, echo=FALSE}
+#TOC {
+  width: 60em;
+  white-space: nowrap;
+}
+
+div.tocify {
+width: 100%;
+}
+
+div:has(> #TOC) {
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.custom-box {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin: 20px 0;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+```
+
+```{r setup, include=FALSE}
+# Setting up CRAN mirror
+options(repos = c(CRAN = "https://cran.r-project.org"))
+
+# Function to install and load packages
+install_and_load <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package)
+    library(package, character.only = TRUE)
+  }
+}
+
+# Install and load necessary packages
+install_and_load("knitr") # For this R Markdown
+install_and_load("learnr") # For interactive tutorials
+install_and_load("tzdb")  # For time zone database
+install_and_load("vroom") # For reading csv files
+install_and_load("readr") # for reading csv files
+install_and_load("dplyr") # for data wrangling
+install_and_load("tidyr") # for data wrangling
+install_and_load("curl")  # Install curl package
+install_and_load("cli")   # Install cli package
+install_and_load("DT") # showcasing tabular data on slider (javascript based)
+install_and_load("ggplot2") # for data visualization
+install_and_load("plotly") # for data visualization
+install_and_load("gapminder") # for data visualization
+
+tutorial_options(
+  exercise.timelimit = 60,
+  # A simple checker function that just returns the message in the check chunk
+  exercise.checker = function(check_code, ...) {
+    list(
+      message = eval(parse(text = check_code)),
+      correct = logical(0),
+      type = "info",
+      location = "append"
+    )
+  }
+)
+
+knitr::opts_chunk$set(error = TRUE)
+```
+
+## Einleitung
+
+**Willkommen zum R-Tutorial: Strukturierte Datenanalyse 🎉**
+
+Wir freuen uns, dass Sie an unserem interaktiven R-Tutorial teilnehmen. 
+In diesem Tutorial lernen Sie, wie man strukturierte Daten mit R effizient analysiert – 
+von der Datenaufbereitung über die Analyse bis hin zur Ergebnispräsentation.
+Dazu führen wir Sie anhand unseres selbstständig erhobenen Datensatzes durch den Prozess der Datenanalyse und erklären Ihnen
+dabei alles, was Sie wissen müssen, um Ihre eigene Datenanalyse 
+mit Ihren eigenen Daten durchführen zu können.
+    
+**Was ist R?📈**
+
+R ist eine Programmiersprache und Umgebung, die speziell für 
+statistische Analysen und Datenvisualisierung entwickelt wurde. 
+Mit einer riesigen Sammlung von Paketen und Funktionen ist R eines der 
+mächtigsten Tools für Datenwissenschaftler, Statistiker und alle, 
+die datenbasierte Entscheidungen treffen möchten.
+    
+**Das können Sie mit R machen:**
+
+- 📊 Daten aufbereiten und bereinigen
+- 📈 Analysen durchführen, von Mittelwerten bis zur linearen Regression
+- 🎨 Visualisierungen erstellen und interpretieren
+
+**Was erwartet Sie?**
+
+Dieses Tutorial kombiniert Theorie, interaktive Codeübungen, Quizfragen und 
+externe Ressourcen (z. B. Bilder und Videos). Alles ist darauf ausgelegt, Ihr 
+Verständnis für Datenanalyse mit R zu vertiefen.
+    
+### Lernziele 📖
+
+Am Ende dieses Tutorials werden Sie folgendes erreicht haben:
+1. Eine Tabelle und ihre Datentypen kennenlernen
+2. Einen Datensatz so bereinigen, dass er für Analysezwecke nutzbar ist
+3. Methoden der sogenannten Datenwissenschaft nutzen, um Eigenschaften, Verteilungen und Wahrscheinlichkeiten zu erhalten
+4. Hypothesen des Datensatzes durch diese Methoden überprüfen
+5. Ergebnisse durch verschiedene Visualisierungen darstellen
+
+### Ressourcen 🛠️
+
+![Hier finden Sie zudem vorab hilfreiche Hinweise und eine grundlegende Einführung in die Verwendung von R!](https://www.youtube.com/watch?v=yZ0bV2Afkjc)
+
+Hier finden Sie verschiedene Cheat Sheets, die Ihnen bei der Arbeit mit R helfen können:
+
+Für Datenaufbereitung:
+https://rstudio.github.io/cheatsheets/html/tidyr.html
+
+Für Datenanalyse:
+https://rstudio.github.io/cheatsheets/html/data-transformation.html
+
+Für Datenvisualisierung:
+https://rstudio.github.io/cheatsheets/html/data-visualization.html
+
+Ein gutes Tutorial zu R Markdown, mit dem dieses Tutorial erstellt wurde:
+https://bookdown.org/yihui/rmarkdown/
+
+Und wenn Sie internen Zugriff der Hochschule Reutlingen besitzen, können Sie
+dieses Tutorial in GitLab finden:
+https://gitlab.reutlingen-university.de/lauterba/datascience_project_tutorialwithsurveydata
+
+Lassen Sie uns starten! 🚀
+
+## Datenbasis 
+
+**Vergleich verschiedener Daten Deutschland🥨 vs. Spanien🥘**
+
+Wir haben eine Umfrage mit verschiedensten Fragen zum Leben, physischen Merkmalen und persönlichen Einstellungen über Google Form erstellt. Diese wurden zusätzlich ins Spanische übersetzt und an Kontakte der Umfrageersteller in Deutschland und in Spanien verschickt.
+    
+**Ziel 🎯 der Datenerhebung 📝**
+
+Mit dieser Datenerhebung wollen wir verschiedenste Hypothesen zu Unterschieden zwischen dem Lebensstil in Deutschland und Spanien erkunden und gleichzeitig auch bereits vermutete Hypothesen unterstützen wie z.B. eine kleinere Körpergröße der Spanier im Vergleich zu den Deutschen oder eine im Schnitt dunklere Haar- und Augenfarbe.
+
+**Fragen ❓**
+
+Den Teilnehmern wurden Fragen aus den folgenden Themengebieten gestellt:
+
+    
+**1. Physische Merkmale:**
+
+  - Haarfarbe
+
+  - Augenfarbe
+
+  - Körpergröße
+
+  - Schuhgröße
+    <br><br>
+
+**2. Lebensstil:**
+
+  - Bildungsabschluss
+
+  - Fleischkonsum
+
+  - Wasserkonsum
+
+  - Lebensmittelkosten
+
+  - Schlafverhalten
+
+  <br><br>
+      
+**3. Persönliche Einstellung:**
+
+  - Datenschutz
+
+  - Demokratie
+
+  - Reisen und Tourismus
+
+  - Umweltfreundlichkeit
+
+
+### Datenquelle 💾 
+
+[Hier](https://docs.google.com/forms/d/e/1FAIpQLSfP_4VDf5Og2s1fT22KtWmFPsUsf34jxkBICxzUcgryvZL9wg/viewform?usp=sharing) können Sie selbst an der Befragung teilnehmen, und mit Ihren Eingaben die Datenbasis erweitern, mit denen Sie gleich arbeiten werden. 
+
+[Hier](https://docs.google.com/spreadsheets/d/19mfbkTdvnTZIRasMLSm0r6oqkR184K2Uzf6cEHab2Xo/export?format=csv&gid=1421671188) finden Sie einen Link, welcher Ihnen die Ergebnisse der Befragung als .csv-Datei herunterladen lässt.
+
+### Hypothese 🤔
+
+  Aus den Ergebnissen haben wir uns für die weitere Überprüfung folgende Hypothese überlegt, die wir im späteren Verlauf auf ihre Richtigkeit überprüfen wollen:
+
+<div class="custom-box">
+  *Die Wahrscheinlichkeit, dass eine Person mit dem Aufenthaltsland Spanien an 4 oder mehr Tagen pro Woche Fleisch konsumiert, ist um 60% höher als die einer Person mit dem Aufenthaltsland Deutschland.*
+</div>
+
+
+## Datenaufbereitung
+
+### Daten einlesen
+
+#### Einlesen in "data"
+
+<!-- Beschreibe, wie die Daten eingelesen werden und wie Inkonsistenzen und Leerstellen behoben werden. -->
+
+<div class="custom-box">
+  Mit dem folgenden Code holen wir uns die .csv der Umfragedaten von extern (google-sheets) und laden diese dann 
+  per readr-library mit read_csv in unsere data Variable. Wir setzen show_col_types auf False, um keine unnötigen
+  Informationen darüber zu erhalten, wie einzelne Zellen voneinander getrennt sind. 
+</div>
+
+```{r}
+# Bibliothek, die bereits geladen wurde: readr, dplyr, DT
+
+# Daten von Google Sheets einlesen, da die Umfrage online stattgefunden hat
+url <- "https://docs.google.com/spreadsheets/d/19mfbkTdvnTZIRasMLSm0r6oqkR184K2Uzf6cEHab2Xo/export?format=csv"
+data <- read_csv(url, show_col_types = FALSE) # Einlesen von google sheets, show_col_types = FALSE, um die csv Attribute nicht anzuzeigen
+
+# Wir geben die Spaltennamen aus
+colnames(data)
+```
+
+<br><br>
+
+#### Spalten in Deutsch
+
+<div class="custom-box">
+  Um mit kurzen prägnanten Spaltennamen arbeiten zu können, ändern wir die Namen der einzelnen Spalten zu einem kurzen Wort in Deutsch.
+  
+  Mit der Library DT erstellen Wir ein View auf unsere Daten mit einem Display, welches Slider erlaubt. 
+  Nutzen Sie diesen Slider am unteren Rand der Daten, um Sie zu begutachten. 
+</div>
+
+```{r}
+# Wir erstellen neue Namen für die Spalten
+new_column_names <- c(
+  "Zeitstempel", "Aufenthaltsland", "Haarfarbe", "Haarlänge", "Alter", "Geschlecht", 
+  "Bildungsabschluss", "Augenfarbe", "Internetnutzung", "Arbeitszeit", "Schlafzeit", 
+  "Einschlafzeit", "Körpergröße", "Sprachkenntnisse", "Schuhgröße", "Fleischkonsum", 
+  "Datenschutz", "Reisen", "Demokratie", "Umweltfreundlichkeit", "Wasserkonsum", 
+  "Lebensmittelkosten", "Verwirrung", "Ruhepuls", "Blutdruck"
+)
+
+# Wir setzen die neuen Spaltennamen als die Spaltennamen des Datensatzes
+colnames(data) <- new_column_names
+
+# Wir stellen die ersten 50 Zeilen der Daten dar
+datatable(head(data, 50), options = list(scrollX = TRUE))
+
+```
+
+<br><br>
+
+### Datenbereinigung
+
+<br><br>
+
+**Fällt Ihnen etwas auf?** 🤔
+Schauen Sie sich die Daten genau an und überlegen Sie, was bereinigt werden muss, da Personen bei vielen Dingen frei antworten konnten.
+
+In diesem Abschnitt werden wir die drei Methoden `mutate`, `separate` und `filter` verwenden, um unsere Daten zu vereinheitlichen und ggf. zu transformieren:
+
+<br><br>
+
+#### Mutate()
+
+Die mutate-Methode ist mit folgendem Syntax aufgebaut: 
+
+-> mutate(neue_spalte = Funktion(alte_spalte))
+
+Beispiel **mutate**: 
+```{r}
+# Beispiel-Datensatz
+bsp1 <- tibble(
+  Name = c("Anna Müller", "Bernd Schmidt", "Clara Meier"),
+  Alter = c(25, 30, 22),
+  Haarlaenge = c("30cm", "45cm", "50cm")
+)
+
+# mutate verwenden, um Haarlänge zu bereinigen | Tipp: nutzen Sie einen Tibble um die Spalte zu "mutaten"
+bsp1 <- bsp1 %>%
+  mutate(Haarlaenge = as.integer(gsub("cm", "", Haarlaenge)))
+
+```
+
+```{r question-mutate, echo=FALSE}
+question("Was ist das Ergebnis von `Haarlaenge` nach der Bereinigung?",
+  answer("cm, cm, cm"),
+  answer("cm 30, cm 45, cm 50"),
+  answer("30, 45, 50", correct = TRUE),
+  answer("30cm, 45cm, 50cm"),
+  allow_retry = TRUE
+)
+```
+<br><br>
+
+#### Separate()
+
+Die separate-Methode ist mit folgendem Syntax aufgebaut: 
+
+-> separate(Spalte, into = c("neue_spalte1", "neue_spalte2"), sep = "Trennzeichen")
+
+Beispiel **separate**: 
+```{r}
+# Beispiel-Datensatz
+bsp1 <- tibble(
+  Name = c("Anna Müller", "Bernd Schmidt", "Clara Meier"),
+  Alter = c(25, 30, 22)
+)
+
+# separate verwenden, um Name in Vorname und Nachname zu trennen
+bsp1 <- bsp1 %>%
+  separate(Name, into = c("Vorname", "Nachname"), sep = " ")
+
+```
+
+```{r question-seperate, echo=FALSE}
+question("Was ist das Ergebnis von `Name` nach der Trennung?",
+  answer("Vorname: Anna, Bernd, Clara Meier"),
+  answer("Name: Anna, Bernd, Clara"),
+  answer("Vorname: Anna, Bernd, Clara | Nachname: Müller, Schmidt, Meier", correct = TRUE),
+  answer("Anna Müller, Bernd Schmidt, Clara Meier"),
+  allow_retry = TRUE
+)
+```
+
+<br><br>
+
+#### Filter()
+
+Die filter-Methode ist mit folgendem Syntax aufgebaut: 
+
+-> filter(Spalte > Wert)
+
+Beispiel **filter**:
+```{r}
+# Beispiel-Datensatz
+bsp1 <- tibble(
+  Vorname = c("Anna", "Bernd", "Clara"),
+  Nachname = c("Müller", "Schmidt", "Meier"),
+  Alter = c(25, 30, 22)
+)
+
+# filter verwenden, um Personen über 25 Jahre zu filtern
+bsp1 <- bsp1 %>%
+  filter(Alter > 25)
+```
+
+```{r question-filter, echo=FALSE}
+question("Was ist das Ergebnis von `Alter` nach dem Filtern?",
+  answer("25, 30, 22"),
+  answer("Anna Müller, Clara Meier"),
+  answer("Anna Müller, Bernd Schmidt"),
+  answer("Bernd Schmidt", correct = TRUE),
+  answer("Bernd Schmidt, 30, Anna Müller, 25"),
+  allow_retry = TRUE
+)
+```
+
+<br><br>
+<br><br>
+
+### Must-Dos zur Datenaufbereitung
+
+**Nun sind Sie dran! Nutzen Sie die Methoden, um die Spalten zu vereinheitlichen** 🚀
+
+<br><br>
+<br><br>
+
+
+#### (1) Haarlänge
+
+Haarlänge in cm | Longitud del cabello en cm
+-> Hier müssen wir auf eine Ganzzahl prüfen und die Schreibweise vereinheitlichen, so dass cm nicht mehr Teil der Daten ist.
+
+```{r exercise=TRUE, exercise.eval=FALSE, haarlaenge_bereinigen}
+# Aufgabe: Prüfen Sie, ob die Haarlänge eine Ganzzahl ist und entfernen Sie "cm" aus den Daten.
+data <- data %>%
+  # ...user code here...
+
+
+
+
+
+
+
+
+```
+
+**SPOILER:**
+```{r exercise.solution=TRUE, haarlaenge_bereinigen_solution}
+# Lösung:
+data <- data %>%
+  mutate(`Haarlänge` = as.integer(gsub("cm", "", `Haarlänge`)))
+```
+
+<br><br>
+<br><br>
+
+#### (2) Einschlafzeit
+
+Durchschnittliche Zeit des Einschlafens hhmm | Tiempo promedio para conciliar el sueño hhmm
+-> Hier ist ganz viel falsch. Viele Leute haben die Frage als "Wie lange brauchen Sie einzuschlafen?" verstanden und die Zeit in Minuten angegeben.
+-> Wir sollten in zwei Spalten aufteilen: 1. Wie lange brauchen Sie einzuschlafen? 2. Wann gehen Sie ins Bett? (hh:mm oder hhmm)
+
+```{r einschlafzeit_aufteilen, exercise=TRUE, exercise.eval=FALSE}
+# Aufgabe: Teilen Sie die Spalte in zwei Spalten auf: 1. Wie lange brauchen Sie einzuschlafen? 2. Wann gehen Sie ins Bett?
+library(tidyr)
+data <- data %>%
+  # ...Ihr code hier ..
+
+
+
+
+
+
+
+```
+
+
+**SPOILER:**
+```{r exercise.solution=TRUE, einschlafzeit_aufteilen_solution}
+# Lösung:
+data <- data %>%
+  separate(`Einschlafzeit`, 
+           into = c("Einschlafzeit_Minuten", "Bettgehzeit_hhmm"), 
+           sep = " ", 
+           convert = TRUE)
+```
+
+<br><br>
+<br><br>
+
+#### (3) Körpergröße
+
+Körpergröße in cm | Altura en cm 
+-> Hier müssen wir auf eine Ganzzahl im Bereich von 100 bis 250 prüfen und die Schreibweise vereinheitlichen.
+
+```{r koerpergroesse_bereinigen, exercise=TRUE, exercise.eval=FALSE}
+# Aufgabe: Prüfen Sie, ob die Körpergröße eine Ganzzahl im Bereich von 100 bis 250 ist und vereinheitlichen Sie die Schreibweise.
+data <- data %>%
+  # ...Ihr code hier ...
+
+
+
+
+
+
+
+```
+
+
+**SPOILER:**
+```{r exercise.solution=TRUE, koerpergroesse_bereinigen_solution}
+# Lösung:
+data <- data %>%
+  mutate(`Körpergröße` = as.integer(`Körpergröße`)) %>%
+  filter(`Körpergröße` >= 100 & `Körpergröße` <= 250)
+```
+
+<br><br>
+<br><br>
+
+#### (4) Lebensmittelkosten
+
+Wie viel Euro/ Monat für Lebensmittel geben Sie p.P. aus? | ¿Cuántos euros al mes gasta en alimentos por persona? 
+-> Hier haben viele Personen ein Eurozeichen oder ein "eur" hinter oder vor der Zahl geschrieben.
+
+```{r exercise=TRUE, exercise.eval=FALSE, lebensmittelkosten_bereinigen}
+# Aufgabe: Entfernen Sie alle fremden strings aus den Daten, die keine zusammenhängende Zahl ist.
+data <- data %>%
+  # ...Ihr code hier ...
+
+
+
+
+
+
+
+```
+
+
+**SPOILER:**
+```{r exercise.solution=TRUE, lebensmittelkosten_bereinigen_solution}
+# Lösung:
+data <- data %>%
+  mutate(`Lebensmittelkosten` = 
+           as.numeric(gsub("[^0-9.]", "", `Lebensmittelkosten`)))
+```
+
+<br><br>
+<br><br>
+
+#### (5) Blutdruck
+
+(optional) Was ist Ihr durchschnittlicher Blutdruck in systolischer Wert/diastolischer Wert? | (opcional) ¿Cuál es su presión arterial promedio en valor sistólico/valor diastólico? 
+-> Hier müssen wir die Werte in zwei Spalten aufteilen, und die Schreibweise vereinheitlichen, damit die deutschen Werte (z.B:. 120/80) den spanischen Werten angepasst sind (z.B.: 12/8). 
+
+```{r exercise=TRUE, exercise.eval=FALSE, blutdruck_bereinigen}
+# Aufgabe: Teilen Sie die Spalte in zwei Spalten auf: systolischer Wert und diastolischer Wert.
+data <- data %>%
+  # ...Ihr code hier ...
+
+
+
+
+
+
+
+```
+
+
+**SPOILER:**
+```{r exercise.solution=TRUE, blutdruck_bereinigen_solution}
+# Lösung:
+data <- data %>%
+  separate(`Blutdruck`, 
+           into = c("Blutdruck_systolisch", "Blutdruck_diastolisch"), 
+           sep = "/", 
+           convert = TRUE) %>%
+  mutate(
+    Blutdruck_systolisch = ifelse(Blutdruck_systolisch < 100, Blutdruck_systolisch * 10, Blutdruck_systolisch),
+    Blutdruck_diastolisch = ifelse(Blutdruck_diastolisch < 25, Blutdruck_diastolisch * 10, Blutdruck_diastolisch)
+  )
+```
+
+## Datenanalyse
+
+### Methoden der Data Science 
+
+<!-- Beschreibe Mittelwert, Median, Varianz, Standardabweichung, lineare Regression und Hypothesentests. -->
+<!-- Einlesen des Datensatzes und Methoden nacheinander durch --> 
+
+#### Mittelwert
+
+Der Mittelwert ist der Durchschnitt aller Werte in einer Datenreihe. Er wird berechnet, indem alle Werte addiert und durch die Anzahl der Werte geteilt werden.
+
+```{r}
+# Berechnung des Mittelwerts der Körpergröße
+mean(data$Körpergröße)
+```
+<br><br>
+
+#### Median
+
+Der Median ist der Wert, der die Datenreihe in zwei gleich große Teile teilt. Er wird berechnet, indem die Werte sortiert und der mittlere Wert ausgewählt wird.
+
+```{r}
+# Berechnung des Medians der Körpergröße
+median(data$Körpergröße)
+```
+<br><br>
+
+#### Varianz
+
+Die Varianz ist ein Maß für die Streuung der Daten um den Mittelwert. Sie wird berechnet, indem die quadrierten Abweichungen der Werte vom Mittelwert summiert und durch die Anzahl der Werte geteilt werden.
+
+```{r}
+# Berechnung der Varianz der Körpergröße
+var(data$Körpergröße)
+```
+<br><br>
+
+#### Standardabweichung
+
+Die Standardabweichung ist die Quadratwurzel der Varianz und gibt an, wie weit die Werte von ihrem Mittelwert entfernt sind.
+
+```{r}
+# Berechnung der Standardabweichung der Körpergröße
+sd(data$Körpergröße)
+```
+<br><br>
+
+#### Lineare Regression
+
+Die lineare Regression ist eine Methode zur Modellierung des Zusammenhangs zwischen einer abhängigen und einer oder mehreren unabhängigen Variablen. Sie wird verwendet, um den Einfluss der unabhängigen Variablen auf die abhängige Variable zu schätzen.
+
+```{r}
+# Lineare Regression der Körpergröße in Abhängigkeit vom Alter
+lm(data$Körpergröße ~ data$Schuhgröße)
+
+# einfacher plot, um prinzip zu visualisieren
+plot(data$Schuhgröße, data$Körpergröße)
+abline(lm(data$Körpergröße ~ data$Schuhgröße), col = "red")
+```
+<br><br>
+
+#### Hypothesentests
+
+Hypothesentests sind statistische Tests, die verwendet werden, um zu überprüfen, ob eine Hypothese über eine Population wahr ist. Sie basieren auf der Annahme, dass die Daten zufällig aus einer bestimmten Verteilung stammen.
+
+Hier lösen wir eine relativ einfache Hypothese, die wir uns für die Daten überlegt haben, bevor wir die größere Hypothese überprüfen.
+
+**Hypothese: Die Wahrscheinlichkeit, dass eine Person aus Spanien braune Augen hat, ist um 20% höher als die Wahrscheinlichkeit, dass eine Person aus Deutschland braune Augen hat.**
+```{r}
+# 1. Hypothesen aufstellen (Ho, Ha)
+
+  # H0: Die Wahrscheinlichkeit, dass eine Person aus Spanien braune Augen hat, ist gleich der Wahrscheinlichkeit, dass eine Person aus Deutschland braune Augen hat.
+  # Ha: Die Wahrscheinlichkeit, dass eine Person aus Spanien braune Augen hat, ist um 20% höher als die Wahrscheinlichkeit, dass eine Person aus Deutschland braune Augen hat.
+
+# 2. Vertrauenswahrscheinlichkeit festlegen
+
+  # Vertrauenswahrscheinlichkeit: 95%
+  # Das bedeutet, dass wir zu 95% sicher sein wollen, dass unser Ergebnis korrekt ist.
+  # Signifikanzniveau: 5%
+  # Das Signifikanzniveau von 5% (0,05) bedeutet, dass wir bereit sind, ein 5%iges Risiko einzugehen, die Nullhypothese fälschlicherweise abzulehnen.
+  # Obwohl die Alternativhypothese (Ha) eine 20% höhere Wahrscheinlichkeit angibt, bleibt das Signifikanzniveau bei 5%, um die Strenge des Tests zu gewährleisten.
+
+# 3. Passende Teststatistik heraussuchen
+
+Personen <- data %>%
+  filter(Aufenthaltsland %in% c("Deutschland", "Spanien")) %>%
+  count(Aufenthaltsland, Augenfarbe) %>%
+  pivot_wider(names_from = Augenfarbe, values_from = n, values_fill = list(n = 0))
+
+# 4. Testgröße t mit der Teststatistik berechnen
+
+# Wir verwenden den Chi-Quadrat-Test, weil wir zwei kategoriale Variablen haben (Aufenthaltsland und Augenfarbe) und prüfen wollen, ob es einen signifikanten Unterschied in der Verteilung der Augenfarben zwischen den beiden Ländern gibt.
+chisq_test_result <- chisq.test(Personen[, -1])
+
+# 5. Interpretation des Ergebnisses
+
+if (chisq_test_result$p.value < 0.05) {
+  interpretation <- "Da der p-Wert kleiner als das Signifikanzniveau ist, lehnen wir die Nullhypothese ab und akzeptieren die Alternativhypothese. Das heißt, die Wahrscheinlichkeit, dass eine Person aus Spanien braune Augen hat, ist um 20% höher als die Wahrscheinlichkeit, dass eine Person aus Deutschland braune Augen hat."
+} else {
+  interpretation <- "Da der p-Wert größer als das Signifikanzniveau ist, können wir die Nullhypothese nicht ablehnen. Das heißt, die Wahrscheinlichkeit, dass eine Person aus Spanien braune Augen hat, ist nicht um 20% höher als die Wahrscheinlichkeit, dass eine Person aus Deutschland braune Augen hat."
+}
+
+interpretation
+```
+<br><br>
+
+**Erklärung der Schritte:**
+
+**Hypothesen aufstellen:** Wir formulieren die Nullhypothese (H0) und die Alternativhypothese (Ha). H0 besagt, dass es keinen Unterschied in der Wahrscheinlichkeit gibt, während Ha besagt, dass die Wahrscheinlichkeit in Spanien um 20% höher ist.
+
+**Vertrauenswahrscheinlichkeit und Signifikanzniveau festlegen:** Wir wählen eine Vertrauenswahrscheinlichkeit von 95%, was einem Signifikanzniveau von 5% entspricht. Dies bedeutet, dass wir ein 5%iges Risiko akzeptieren, die Nullhypothese fälschlicherweise abzulehnen.
+
+**Passende Teststatistik heraussuchen:** Wir verwenden den Chi-Quadrat-Test, da wir zwei kategoriale Variablen haben und die Verteilung der Augenfarben zwischen den beiden Ländern vergleichen möchten.
+
+**Testgröße berechnen:** Wir führen den Chi-Quadrat-Test durch und berechnen den p-Wert.
+
+**Ergebnis interpretieren:** Basierend auf dem p-Wert entscheiden wir, ob wir die Nullhypothese ablehnen oder nicht. Wenn der p-Wert kleiner als 0.05 ist, lehnen wir die Nullhypothese ab und akzeptieren die Alternativhypothese.
+<br><br>
+
+### Quizfragen
+
+```{r question-mittelwert, echo=FALSE}
+question("Was ist der Mittelwert der Körpergröße?",
+  answer("170", correct = TRUE),
+  answer("180"),
+  answer("160"),
+  answer("190"),
+  allow_retry = TRUE
+)
+```
+
+```{r question-median, echo=FALSE}
+question("Was ist der Median der Körpergröße?",
+  answer("170", correct = TRUE),
+  answer("180"),
+  answer("160"),
+  answer("190"),
+  allow_retry = TRUE
+)
+
+```
+
+```{r question-varianz, echo=FALSE}
+question("Was ist die Varianz der Körpergröße?",
+  answer("100"),
+  answer("200"),
+  answer("150", correct = TRUE),
+  answer("250"),
+  allow_retry = TRUE
+)
+
+```
+
+```{r question-varianz-bedeutung, echo=FALSE}
+question("Welche Bedeutung hat die richtige Varianz?",
+  answer("Die Daten sind eher homogen (Elemente darin ähnlich)"),
+  answer("Die Daten sind eher heterogen (Elemente darin unterschiedlich)", correct = TRUE),
+  allow_retry = TRUE
+)
+```
+
+```{r question-standardabweichung, echo=FALSE}
+question("Was ist die Standardabweichung der Körpergröße?",
+  answer("12", correct = TRUE),
+  answer("20"),
+  answer("15"),
+  answer("25"),
+  allow_retry = TRUE
+)
+
+```
+
+```{r question-lineare-regression, echo=FALSE}
+question("Was ist der Zusammenhang zwischen Körpergröße und Schuhgröße?",
+  answer("Es gibt keinen Zusammenhang"),
+  answer("Es gibt einen positiven Zusammenhang", correct = TRUE),
+  answer("Es gibt einen negativen Zusammenhang"),
+  allow_retry = TRUE
+)
+```
+
+<br><br>
+<br><br>
+<br><br>
+
+### Großer Hypothesentest
+
+<!-- Führe Hypothesentests durch, um deine Hypothese zu überprüfen. -->
+<!-- 1. Hypothesen aufstellen (Ho, Ha)
+    2. Vertrauenswahrscheinlichkeit festlegen
+    3. passende Teststatistik heraussuchen
+    4. Testgröße t mittle Teststatistik berechnen
+    5. Interpretation des Ergebnisses -->
+
+Jetzt überprüfen Wir unsere am Anfang des Tutorials aufgestellte Hypothese, die besagt, dass:
+
+
+
+**Hypothese: Die Wahrscheinlichkeit, dass eine Person mit dem Aufenthaltsland Spanien an 4 oder mehr Tagen Pro Woche Fleisch konsumiert ist um 60% höher, als die einer Person mit dem Aufenthaltsland Deutschland.**
+
+```{r}
+#Hypothesen aufstellen (Ho, Ha)
+#Nullhypothese (H₀): Die Wahrscheinlichkeit, dass eine Person in Spanien an 4 oder mehr Tagen pro Woche Fleisch konsumiert, ist nicht um 60% höher als die einer Person in Deutschland.
+#Alternativhypothese (Hₐ): Die Wahrscheinlichkeit, dass eine Person in Spanien an 4 oder mehr Tagen pro Woche Fleisch konsumiert, ist um 60% höher als die einer Person in Deutschland. 
+
+# 2. Vertrauenswahrscheinlichkeit festlegen
+# Vertrauenswahrscheinlichkeit: 95%
+  # Das bedeutet, dass wir zu 95% sicher sein wollen, dass unser Ergebnis korrekt ist.
+  # Signifikanzniveau: 5%
+
+```
+
+```{r question-significant, echo=FALSE}
+question("Das Signifikanzniveau von 5% (0,05) bedeutet, dass...",
+  answer("...wir bereit sind, ein 5%iges Risiko einzugehen, die Nullhypothese fälschlicherweise anzunehmen."),
+  answer("...wir bereit sind, ein 5%iges Risiko einzugehen, die Alternativhypothese fälschlicherweise anzunehmen."),
+  answer("...wir bereit sind, ein 5%iges Risiko einzugehen, die Nullhypothese fälschlicherweise abzulehnen.", correct = TRUE),
+  answer("...wir bereit sind, ein 5%iges Risiko einzugehen, die Alternativhypothese fälschlicherweise abzulehnen."),
+  allow_retry = TRUE
+)
+```
+
+```{r}
+
+#3. Passende Teststatistik heraussuchen
+#Wir verwenden den Z-Test für zwei Anteilswerte, da es sich um den Vergleich zweier Wahrscheinlichkeiten handelt.
+
+#4. Testgröße t mit der Teststatistik berechnen
+# Filter für Aufenthaltsland und Fleischkonsum
+
+```
+
+
+```{r setupA}
+url <- "https://docs.google.com/spreadsheets/d/19mfbkTdvnTZIRasMLSm0r6oqkR184K2Uzf6cEHab2Xo/export?format=csv"
+hypo_data <- read_csv(url, show_col_types = FALSE)
+new_column_names <- c(
+  "Zeitstempel", "Aufenthaltsland", "Haarfarbe", "Haarlänge", "Alter", "Geschlecht", 
+  "Bildungsabschluss", "Augenfarbe", "Internetnutzung", "Arbeitszeit", "Schlafzeit", 
+  "Einschlafzeit", "Körpergröße", "Sprachkenntnisse", "Schuhgröße", "Fleischkonsum", 
+  "Datenschutz", "Reisen", "Demokratie", "Umweltfreundlichkeit", "Wasserkonsum", 
+  "Lebensmittelkosten", "Verwirrung", "Ruhepuls", "Blutdruck"
+)
+colnames(hypo_data) <- new_column_names
+
+```
+
+```{r fleisch_filter, exercise=TRUE, exercise.setup = "setupA"}
+# Aufgabe: 'Fleischkonsum_4plus' ist 1, wenn 'Fleischkonsum' 4 oder mehr Tage beträgt, und 0 andernfalls.
+#Tip: mutate(Fleischkonsum_4plus = )
+hypo_data <- hypo_data %>%
+
+```
+
+```{r fleisch_filter-solution}
+hypo_data <- hypo_data %>%
+  mutate(Fleischkonsum_4plus = ifelse(Fleischkonsum >= 4, 1, 0))
+
+```
+
+
+```{r fleisch_filter-check}
+"Richtig!"
+```
+
+```{r setupB, exercise.setup = "setupA"}
+hypo_data <- hypo_data %>%
+  mutate(Fleischkonsum_4plus = ifelse(Fleischkonsum >= 4, 1, 0))
+
+```
+
+```{r land_filter, exercise=TRUE, exercise.setup = "setupB"}
+
+#Aufgabe: Filtere hypo_data pro Aufenthaltsland
+spanien <- hypo_data %>% 
+deutschland <- hypo_data %>% 
+
+```
+
+```{r land_filter-solution}
+spanien <- hypo_data %>% filter(Aufenthaltsland == "Spanien | España")
+deutschland <- hypo_data %>% filter(Aufenthaltsland == "Deutschland")
+
+```
+
+```{r land_filter-check}
+"Richtig!"
+```
+
+```{r setupC, exercise.setup = "setupB"}
+spanien <- hypo_data %>% filter(Aufenthaltsland == "Spanien | España")
+deutschland <- hypo_data %>% filter(Aufenthaltsland == "Deutschland")
+
+```
+
+```{r wahrscheinlich, exercise=TRUE, exercise.setup = "setupC"}
+
+# Aufgabe: Berechnung der Wahrscheinlichkeiten für Spanien und Deutschland
+p_spanien <- 
+p_deutschland <- 
+
+```
+
+```{r wahrscheinlich-solution}
+p_spanien <- mean(spanien$Fleischkonsum_4plus)
+p_deutschland <- mean(deutschland$Fleischkonsum_4plus)
+
+```
+
+```{r wahrscheinlich-check}
+"Richtig!"
+```
+
+```{r setupD, exercise.setup = "setupC"}
+p_spanien <- mean(spanien$Fleischkonsum_4plus)
+p_deutschland <- mean(deutschland$Fleischkonsum_4plus)
+
+```
+
+```{r n, exercise=TRUE, exercise.setup = "setupD"}
+
+# Aufgabe: Geben Sie jeweils die Anzahl der Personen an
+#Tip: Benutzen Sie nrow()
+n_spanien <-
+n_deutschland <- 
+
+```
+
+```{r n-solution}
+n_spanien <- nrow(spanien)
+n_deutschland <- nrow(deutschland)
+
+```
+
+```{r n-check}
+"Richtig!"
+```
+
+```{r setupE, exercise.setup = "setupD"}
+n_spanien <- nrow(spanien)
+n_deutschland <- nrow(deutschland)
+
+```
+
+```{r standard, exercise=TRUE, exercise.setup = "setupE"}
+
+# Aufgabe:Berechne den Standardfehler für den Unterschied der beiden Wahrscheinlichkeiten
+se <- 
+
+```
+
+```{r standard-solution}
+se <- sqrt(p_deutschland * (1 - p_deutschland) / n_deutschland +
+           p_spanien * (1 - p_spanien) / n_spanien)
+
+```
+
+```{r standard-check}
+"Richtig!"
+```
+
+```{r setupF, exercise.setup = "setupE"}
+se <- sqrt(p_deutschland * (1 - p_deutschland) / n_deutschland +
+           p_spanien * (1 - p_spanien) / n_spanien)
+
+```
+
+```{r p_val, exercise=TRUE, exercise.setup = "setupF"}
+# Aufgabe:
+# Differenz in Wahrscheinlichkeiten
+p_diff <- 
+# Berechnet den Z-Wert (Teststatistik) basierend auf der Differenz der Proportionen und dem Standardfehler.
+z <- p_diff / se
+# Berechnet den P-Wert für den einseitigen Z-Test.
+p_value <- 1 - pnorm(z)  # Rechtseitiger Test
+
+```
+
+```{r p_val-solution}
+# Differenz in Wahrscheinlichkeiten
+p_diff <- p_spanien - 1.6 * p_deutschland 
+# Berechnet den Z-Wert (Teststatistik) basierend auf der Differenz der Proportionen und dem Standardfehler.
+z <- p_diff / se
+# Berechnet den P-Wert für den einseitigen Z-Test.
+p_value <- 1 - pnorm(z)  # Rechtseitiger Test
+
+```
+
+```{r p_val-check}
+"Richtig!"
+```
+
+```{r setupG, exercise.setup = "setupF"}
+p_diff <- p_spanien - 1.6 * p_deutschland
+z <- p_diff / se
+p_value <- 1 - pnorm(z)
+
+```
+
+```{r result, exercise=TRUE, exercise.setup = "setupG"}
+# Aufgabe: Vervollständige die Ausgabe
+# Ergebnis ausgeben
+cat("P(Spanien):", , "\n")
+cat("P(Deutschland):", , "\n")
+cat("Z-Wert:", , "\n")
+cat("P-Wert:", , "\n")
+
+# Entscheidung treffen
+if () {
+  cat("Ergebnis: Wir lehnen die Nullhypothese H0 ab. Die Wahrscheinlichkeit in Spanien ist signifikant höher.\n")
+} else {
+  cat("Ergebnis: Wir können die Nullhypothese H0 nicht ablehnen.\n")
+}
+
+```
+
+```{r result-solution}
+# Ergebnis ausgeben
+cat("P(Spanien):", p_spanien, "\n")
+cat("P(Deutschland):", p_deutschland, "\n")
+cat("Z-Wert:", z, "\n")
+cat("P-Wert:", p_value, "\n")
+
+# Entscheidung treffen
+if (p_value < 0.05) {
+  cat("Ergebnis: Wir lehnen die Nullhypothese H0 ab. Die Wahrscheinlichkeit in Spanien ist signifikant höher.\n")
+} else {
+  cat("Ergebnis: Wir können die Nullhypothese H0 nicht ablehnen.\n")
+}
+
+```
+
+```{r result-check}
+"Richtig!"
+```
+
+
+```{r question-end, echo=FALSE}
+question("Wenn wir H0 nicht ablenen können bedeutet das, dass... ",
+  answer("...die Wahrscheinlichkeit, dass eine Person in Spanien an 4 oder mehr Tagen pro Woche Fleisch konsumiert, ist nicht um 60 % höher als die Wahrscheinlichkeit in Deutschland.", correct = TRUE),
+  answer("...die Wahrscheinlichkeit, dass eine Person in Spanien an 4 oder mehr Tagen pro Woche Fleisch konsumiert, ist um 60 % höher als die Wahrscheinlichkeit in Deutschland."),
+  answer("...wir keine Aussage treffen können."),
+  allow_retry = TRUE
+)
+```
+
+
+## Ergebnispräsentation
+
+### Visualisierungen
+
+<!-- Erstelle mindestens 3-4 Grafiken, um die Ergebnisse darzustellen. -->
+
+Im Folgenden wird die Visualisierung via ggplot erklärt. Danach wird ggplot angewendet, um die Hypothese zu visualisieren, sowie bestimmte Umfragedaten zwischen den Ländern visuell zu vergleichen.
+
+<br><br>
+
+#### Erklärung von ggplot
+
+`ggplot2` ist eine der beliebtesten Bibliotheken in R für die Datenvisualisierung. Es basiert auf dem Grammar of Graphics, einem Konzept zur Beschreibung von Grafiken durch Komponenten wie Daten, 
+Ästhetik und Geometrie.
+
+Die grundlegende Struktur eines `ggplot`-Befehls besteht aus folgenden Elementen:
+
+1. `ggplot()`: Erstellt ein leeres Koordinatensystem.
+2. `aes()`: Definiert die Zuordnung von Daten zu visuellen Eigenschaften wie x- und y-Achse, Farbe und Größe.
+3. `geom_*()`: Fügt geometrische Objekte wie Punkte, Linien und Balken hinzu
+4. `labs()`: Fügt Titel und Achsenbeschriftungen hinzu
+5. `theme()`: Ändert das Erscheinungsbild des Diagramms
+
+**Im Folgenden Block dürfen Sie selbst versuchen, eine Visualisierung zu erstellen.**
+
+```{r, exercise=TRUE, exercise.eval=FALSE, pointless_plot}
+
+# Viel Erfolg!
+# *ihr code hier*
+
+```
+<br><br>
+
+**Falls Sie die derzeitigen data sehen wollen:**
+```{r}	
+# Wir stellen die ersten 50 Zeilen der Daten dar
+datatable(head(data, 50), options = list(scrollX = TRUE))
+```
+
+<br><br>
+<br><br>
+
+#### Visualisierung der Hypothese
+
+```{r}
+# Bibliothek, die bereits geladen wurde: ggplot2
+
+# Plot 1 ohne Filter
+ggplot(data, aes(x = Aufenthaltsland, fill = factor(Fleischkonsum))) +
+  geom_bar(position = "dodge", alpha = 0.7) +
+  labs(title = "Balkendiagramm des Fleischkonsums nach Aufenthaltsland",
+       x = "Aufenthaltsland",
+       y = "Anzahl der Personen",
+       fill = "Fleischkonsum") +
+  theme_minimal()
+
+# Plot 2 mit Filter
+# Neue Spalte erstellen, die angibt, ob der Fleischkonsum >= 4 Tage pro Woche ist
+data$Fleischkonsum_4plus <- data$Fleischkonsum >= 4
+
+# Gruppieren und Prozentsatz berechnen
+proportion_df <- data %>%
+  group_by(Aufenthaltsland) %>%
+  summarise(Prozent = mean(Fleischkonsum_4plus) * 100)
+
+# Visualisierung mit ggplot2
+  ggplot(proportion_df, aes(x = Aufenthaltsland, y = Prozent, fill = Aufenthaltsland)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.1f%%", Prozent)), vjust = -0.5, size = 5) +
+  labs(title = "% d. Pers., die 4 oder mehr Tagen p. Woche Fleisch kons.",
+       x = "Aufenthaltsland",
+       y = "Prozentsatz") +
+  ylim(0, 100) +
+  theme_minimal()
+
+# plotly visualisierung, um die Grafik interaktiv und weiter informierend zu gestalten
+
+p <- data %>%
+  filter(Fleischkonsum >= 4) %>%
+  ggplot(aes(Körpergröße, Schuhgröße, size = Lebensmittelkosten, color=Aufenthaltsland)) +
+  geom_point() +
+  scale_x_log10() +
+  theme_bw()
+ 
+ggplotly(p)
+
+```
+
+<br><br>
+<br><br>
+
+#### Sammlung von Plots
+
+<br><br>
+
+```{r}
+# Bibliothek, die bereits geladen wurde: ggplot2
+
+# Wir erstellen ein Histogramm der Körpergröße
+ggplot(data, aes(x = Körpergröße, fill = Aufenthaltsland)) +
+  geom_histogram(binwidth = 5, position = "dodge", alpha = 0.7) +
+  labs(title = "Histogramm der Körpergröße nach Aufenthaltsland",
+       x = "Körpergröße (cm)",
+       y = "Anzahl der Personen") +
+  theme_minimal()
+
+# Wir erstellen ein Boxplot der Lebensmittelkosten
+ggplot(data, aes(x = Aufenthaltsland, y = Lebensmittelkosten, fill = Aufenthaltsland)) +
+  geom_boxplot(alpha = 0.7,  color = "Good Sir") +
+  labs(title = "Boxplot der Lebensmittelkosten nach Aufenthaltsland",
+       x = "Aufenthaltsland",
+       y = "Lebensmittelkosten (Euro pro Monat)") +
+  theme_minimal()
+
+# Wir erstellen ein Streudiagramm der Körpergröße und Schuhgröße
+ggplot(data, aes(x = Körpergröße, y = Schuhgröße, color = Aufenthaltsland)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Streudiagramm der Körpergröße und Schuhgröße nach Aufenthaltsland",
+       x = "Körpergröße (cm)",
+       y = "Schuhgröße") +
+  theme_minimal()
+
+# Wir erstellen ein Histogramm der Augenfarbe
+ggplot(data, aes(x = Augenfarbe, fill = Aufenthaltsland)) +
+  geom_bar(position = "dodge", alpha = 0.7) +
+  labs(title = "Histogramm der Augenfarbe nach Aufenthaltsland",
+       x = "Augenfarbe",
+       y = "Anzahl der Personen") +
+  theme_minimal()
+
+# Wir erstellen ein Histogramm der Datenschutz-Antworten
+ggplot(data, aes(x = Datenschutz, fill = Aufenthaltsland)) +
+  geom_bar(position = "dodge", alpha = 0.7) +
+  labs(title = "Histogramm der Datenschutz-Antworten nach Aufenthaltsland",
+       x = "Datenschutz",
+       y = "Anzahl der Personen") +
+  theme_minimal()
+
+```
